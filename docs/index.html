@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="An original rootless Linux container runtime with a transparent, fixed policy. Explore the native launch plan, not a simulated container."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; connect-src 'none'; object-src 'none'"
+    />
+    <meta name="color-scheme" content="light" />
+    <title>holdfast / a smaller container boundary</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#planner">Skip to launch planner</a>
+    <div class="shell">
+      <aside class="rail">
+        <a class="brand" href="#top" aria-label="holdfast home"
+          ><img src="icon.svg" alt="" width="31" height="31" />holdfast<span
+            >01 / LINUX</span
+          ></a
+        >
+        <div class="rail-note">
+          <span class="tiny">THE BOUNDARY</span>
+          <p>A smaller view.<br />A shorter leash.</p>
+          <span class="rule"></span>
+          <p class="muted">
+            Rootless containers.<br />Original C.<br />One fixed policy.
+          </p>
+        </div>
+        <nav aria-label="Sections">
+          <a href="#planner">01 / Launch plan</a
+          ><a href="#pipeline">02 / Kernel path</a
+          ><a href="#syscalls">03 / Syscall gate</a
+          ><a href="#limits">04 / The edges</a>
+        </nav>
+        <div class="rail-foot">
+          <a
+            href="https://github.com/Aditya2375/holdfast"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Source + native build ↗</a
+          ><span>MIT OR Apache-2.0</span>
+        </div>
+      </aside>
+      <main id="top">
+        <header>
+          <span class="eyebrow">SYSTEMS / CONTAINER RUNTIME</span
+          ><span class="version"><i></i> v1.0.0</span>
+        </header>
+        <section class="hero" aria-labelledby="title">
+          <div>
+            <h1 id="title">Less host.<br />More boundary.</h1>
+            <p class="lede">
+              A real rootless Linux runtime, stripped to one local workload and
+              a policy you can read end to end.
+            </p>
+          </div>
+          <div class="hero-stamp" aria-label="Six namespaces, one process">
+            <strong>6<span>→</span>1</strong>
+            <p>NAMESPACES / PAYLOAD</p>
+            <div>NO DAEMON. NO IMAGES. NO NETWORK.</div>
+          </div>
+        </section>
+        <div class="notice">
+          <span>READ THIS FIRST</span>
+          <p>
+            This page builds a launch plan. It does not run containers. Native
+            execution needs Linux x86-64 with unprivileged user namespaces,
+            seccomp and kernel 5.9+. Host policy may still block it.
+            <a
+              href="https://github.com/Aditya2375/holdfast#quick-start"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Build it locally ↗</a
+            >
+          </p>
+        </div>
+        <section id="planner" aria-labelledby="plan-title">
+          <div class="section-head">
+            <h2 id="plan-title"><span>01</span> Native launch plan</h2>
+            <span class="tiny">SYNTAX ONLY / DISK NOT CHECKED</span>
+          </div>
+          <div class="presets" role="group" aria-label="Example plans">
+            <button type="button" data-example="inspect" aria-pressed="true">
+              Inspect isolation</button
+            ><button type="button" data-example="deny" aria-pressed="false">
+              Denied calls</button
+            ><button type="button" data-example="timeout" aria-pressed="false">
+              Wall timeout</button
+            ><button
+              type="button"
+              data-example="resources"
+              aria-pressed="false"
+            >
+              Resource bounds
+            </button>
+          </div>
+          <div class="plan-grid">
+            <form id="plan-form" novalidate>
+              <label for="root">Host root directory</label
+              ><input
+                id="root"
+                name="root"
+                value="/tmp/holdfast-root"
+                spellcheck="false"
+                maxlength="8192"
+                autocomplete="off"
+              /><label for="program">Program inside the root</label
+              ><input
+                id="program"
+                name="program"
+                value="/bin/payload"
+                spellcheck="false"
+                maxlength="4095"
+                autocomplete="off"
+              />
+              <div class="args-row">
+                <div>
+                  <label for="args">Arguments <small>one per line</small></label
+                  ><textarea
+                    id="args"
+                    name="args"
+                    rows="2"
+                    spellcheck="false"
+                    maxlength="8192"
+                  >
+inspect</textarea
+                  >
+                </div>
+                <div>
+                  <label for="timeout">Wall seconds</label
+                  ><input
+                    id="timeout"
+                    name="timeout"
+                    type="number"
+                    min="1"
+                    max="30"
+                    step="1"
+                    value="5"
+                  />
+                </div>
+              </div>
+              <button class="primary" type="submit">
+                Update launch plan <span>↗</span>
+              </button>
+              <p id="plan-error" role="alert"></p>
+            </form>
+            <div class="receipt">
+              <div class="receipt-top">
+                <span>COMMAND / NOT EXECUTED</span
+                ><button id="copy" type="button">Copy</button>
+              </div>
+              <pre
+                id="command"
+                tabindex="0"
+                aria-label="Generated native command"
+              ></pre>
+              <div class="receipt-facts">
+                <span id="argc"></span><span id="wall"></span
+                ><span>NO SHELL IN RUNTIME</span>
+              </div>
+              <div class="expected">
+                <span class="tiny">EXPECTED NATIVE FIXTURE BEHAVIOR</span>
+                <p id="expected"></p>
+              </div>
+              <p class="receipt-note">
+                Use the README to prepare an empty root with the included static
+                fixture. A valid plan is not proof the path exists, the kernel
+                permits it or the workload is safe.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section id="pipeline" aria-labelledby="pipeline-title">
+          <div class="section-head">
+            <h2 id="pipeline-title"><span>02</span> The kernel path</h2>
+            <span class="tiny">SELECT A STEP</span>
+          </div>
+          <div class="pipeline-grid">
+            <div
+              id="stages"
+              class="stages"
+              role="group"
+              aria-label="Runtime setup stages"
+            ></div>
+            <article class="stage-detail" aria-live="polite">
+              <span id="stage-number" class="tiny"></span>
+              <h3 id="stage-name"></h3>
+              <code id="stage-api"></code>
+              <p id="stage-detail"></p>
+              <div class="fail-closed">
+                ANY SETUP FAILURE → EXIT 125<br /><small
+                  >Never continue on the host.</small
+                >
+              </div>
+            </article>
+          </div>
+        </section>
+        <section id="syscalls" aria-labelledby="syscall-title">
+          <div class="section-head">
+            <h2 id="syscall-title"><span>03</span> The syscall gate</h2>
+            <span class="tiny" id="call-count"></span>
+          </div>
+          <div class="gate">
+            <div>
+              <label for="syscall">Inspect a native x86-64 syscall</label
+              ><input
+                id="syscall"
+                value="openat"
+                placeholder="openat, clone, socket..."
+                spellcheck="false"
+                maxlength="64"
+                autocomplete="off"
+              />
+              <div class="suggestions">
+                <button type="button" data-call="openat">openat</button
+                ><button type="button" data-call="clone">clone</button
+                ><button type="button" data-call="socket">socket</button
+                ><button type="button" data-call="mount">mount</button
+                ><button type="button" data-call="mmap">mmap</button>
+              </div>
+            </div>
+            <div id="decision" aria-live="polite">
+              <span class="tiny" id="verdict"></span>
+              <h3 id="decision-title"></h3>
+              <p id="decision-detail"></p>
+            </div>
+          </div>
+          <details>
+            <summary>Read the complete allowlist</summary>
+            <p class="allowlist" id="allowlist"></p>
+            <p class="muted">
+              Generated from src/policy.h, the header compiled into the native
+              filter. This is a name lookup, not a syscall emulator.
+            </p>
+          </details>
+        </section>
+        <section id="limits" aria-labelledby="limits-title">
+          <div class="section-head">
+            <h2 id="limits-title"><span>04</span> Know the edges</h2>
+            <span class="tiny">A CONTAINER IS NOT A VM</span>
+          </div>
+          <div class="bounds">
+            <div>
+              <strong>256<span>MiB</span></strong>
+              <p>Address space / process</p>
+            </div>
+            <div>
+              <strong>2<span>sec</span></strong>
+              <p>CPU / process</p>
+            </div>
+            <div>
+              <strong>16<span>MiB</span></strong>
+              <p>Private temporary filesystem</p>
+            </div>
+            <div>
+              <strong>1<span>MiB</span></strong>
+              <p>Regular file size / file</p>
+            </div>
+          </div>
+          <div class="edges">
+            <p>
+              <b>Trusted root, shared kernel.</b> Supply your own quiescent
+              local tree, including its ancestors. Read-only mounts do not stop
+              host-side changes. No claim of safety against hostile workloads or
+              kernel bugs.
+            </p>
+            <p>
+              <b>One process, intentionally.</b> No forks, threads, sockets,
+              image pulling, OCI support, cgroups, devices or interactive
+              terminal. Global kernel metrics may remain visible. stdout/stderr
+              are deliberate writable host endpoints.
+            </p>
+            <p>
+              <b>Bounds, not a VM budget.</b> rlimits are per process, not
+              cgroup accounting. No output-byte cap. Inherited supplementary
+              host groups are not cleared. A stalled kernel can delay
+              termination. Use a VM for untrusted code.
+            </p>
+          </div>
+        </section>
+        <footer>
+          <span>holdfast / small enough to inspect</span
+          ><a
+            href="https://github.com/Aditya2375/holdfast#scope-and-limits"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Read the contract ↗</a
+          ><a
+            href="https://man7.org/linux/man-pages/man7/namespaces.7.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Linux namespaces ↗</a
+          >
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
